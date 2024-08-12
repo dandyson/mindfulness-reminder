@@ -1,36 +1,34 @@
-chrome.runtime.onInstalled.addListener(() => {
-  // Load the stored reminder time and set up the initial alarm
-  chrome.storage.sync.get(['reminderTime'], function (result) {
-      const selectedTime = parseInt(result.reminderTime) || 5;
-      setAlarm(selectedTime); // Set initial alarm
+// Get the previous reminder time from storage
+chrome.storage.sync.get(['reminderTime'], function(result) {
+  const reminderTime = parseFloat(result.reminderTime) || 5; // default to 5 minutes if no previous setting
+
+  // Set an alarm to create a notification at the specified interval
+  chrome.alarms.create('reminder', {
+    periodInMinutes: reminderTime
   });
 });
 
-// Set up the alarm
-function setAlarm(reminderTime) {
-  chrome.alarms.clearAll();
-  chrome.alarms.create({ periodInMinutes: reminderTime });
-}
-
-// Handle alarm triggers
-chrome.alarms.onAlarm.addListener(() => {
-  createNotification();
-});
-
-// Function to create the notification
-function createNotification() {
-  chrome.notifications.create({
+// Listen for alarm events
+chrome.alarms.onAlarm.addListener(function(alarm) {
+  if (alarm.name === 'reminder') {
+    chrome.notifications.create({
       type: 'basic',
-      iconUrl: 'images/icon48.png',
+      iconUrl: 'images/mindful_original.png',
       title: 'Mindfulness Reminder',
-      message: 'Take a moment to be mindful and present.',
-  });
-}
-
-// Listen for time update messages from popup.js
-chrome.runtime.onMessage.addListener((message) => {
-  if (message.action === 'updateReminderTime') {
-      const newTime = parseInt(message.reminderTime);
-      setAlarm(newTime);
+      message: 'Take a deep breath and focus on the present moment.'
+    });
   }
+});
+
+// Listen for changes to the reminder time
+chrome.storage.sync.onChanged.addListener(function(changes, namespace) {
+  const newReminderTime = parseFloat(changes.reminderTime.newValue);
+
+  // Remove all previous alarms
+  chrome.alarms.clearAll();
+
+  // Set a new alarm at the specified interval
+  chrome.alarms.create('reminder', {
+    periodInMinutes: newReminderTime
+  });
 });
